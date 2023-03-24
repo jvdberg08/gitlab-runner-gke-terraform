@@ -1,0 +1,43 @@
+gitlabUrl: ${gitlabUrl}
+runnerRegistrationToken: ${gitlabToken}
+concurrent: ${concurrent}
+rbac:
+  create: true
+  clusterWideAccess: false
+runners:
+  image: ubuntu:18.04
+  privileged: true
+  config: |
+    [[runners]]
+      [runners.kubernetes]
+        image = "ubuntu:18.04"
+        
+        [runners.kubernetes.node_selector]
+          "app" = "gitlab-runner"
+        [runners.kubernetes.node_tolerations]
+          "app=gitlab-runner" = ""
+        [runners.kubernetes.pod_labels]
+          "app-pod" = "gitlab-runner"
+
+        [runners.kubernetes.affinity]
+          [runners.kubernetes.affinity.pod_anti_affinity]
+            [[runners.kubernetes.affinity.pod_anti_affinity.required_during_scheduling_ignored_during_execution]]
+              topology_key = "kubernetes.io/hostname"
+              [runners.kubernetes.affinity.pod_anti_affinity.required_during_scheduling_ignored_during_execution.label_selector]
+                [[runners.kubernetes.affinity.pod_anti_affinity.required_during_scheduling_ignored_during_execution.label_selector.match_expressions]]
+                  key = "app-pod"
+                  operator = "In"
+                  values = ["gitlab-runner"]
+
+        [[runners.kubernetes.volumes.empty_dir]]
+          name = "docker-certs"
+          mount_path = "/certs/client"
+          medium = "Memory"
+      
+      [runners.cache]
+        Type = "gcs"
+        [runners.cache.gcs]
+          BucketName = "${bucketName}"
+          CredentialsFile = "/secrets/gcs_cred"
+  cache:
+    secretName: google-application-credentials
